@@ -1,0 +1,9 @@
+Name: PVE
+Version: 0.1.0
+Depends: director>=1.3.0
+Description: Proxmox Virtual Environment (PVE) Import Source
+ The main purpose of this module is being a Import Source provider for the
+ Icinga Director. 
+
+ We expect it to work fine also with older versions, but had no access to
+ such for tests so far. In case you have, please let us know!
