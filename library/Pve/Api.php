@@ -121,11 +121,14 @@ class Api
                 "vmid" => $el['vmid'],
                 "host" => $el['node'],
                 "name" => $el['name'],
-                "pool" => $el['pool'],
                 "type" => $el['type'],
                 "cpu" => (int)$el['maxcpu'],
                 "memory" => (int)$el['maxmem'],
             ];
+
+            if (isset($el['pool'])) {
+                $node['pool'] = $el['pool'];
+            }
 
             $nodes[] = (object)$node;
         }
