@@ -187,11 +187,11 @@ class CurlLoader
             throw new Exception(
                 'Unable to authenticate, please check your API credentials'
             );
-        }
-
-        if ($statusCode >= 400) {
+        } elseif ($statusCode === 500) {
+            // do nothing
+        } elseif ($statusCode >= 400) {
             throw new Exception(
-                "Got $statusCode: " . var_export($res, 1)
+                "Got $statusCode: $url " . var_export($res, 1)
             );
         }
 
@@ -220,7 +220,7 @@ class CurlLoader
         printf("%s %s\n", $method, $url);
         echo implode("\n", $headers);
         echo "\n\n";
-        echo $body;
+        print_r($body);
         echo "\n\n--\n";
     }
 

@@ -41,7 +41,7 @@ class FetchCommand extends CommandBase
         $api = $this->api();
         $api->login();
         Benchmark::measure('Logged in, ready to fetch');
-        $objects = $api->getVMs();
+        $objects = $api->getVMs($this->params->get('guest-agent',false));
         Benchmark::measure(sprintf("Got %d VMs", count($objects)));
         $api->logout();
         Benchmark::measure('Logged out');

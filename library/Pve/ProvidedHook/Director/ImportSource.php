@@ -30,7 +30,7 @@ class ImportSource extends ImportSourceHook
         $api->login();
         switch ($this->getSetting("object_type")) {
             case "VirtualMachine":
-                $data = $api->getVMs();
+                $data = $api->getVMs($this->getSetting('guest_agent') === 'y');
 
                 break;
             case "HostSystem":
@@ -53,7 +53,7 @@ class ImportSource extends ImportSourceHook
      */
     public static function getDefaultKeyColumnName()
     {
-        return 'name';
+        return 'vm_name';
     }
 
     public static function addSettingsFormFields(QuickForm $form)
@@ -75,8 +75,20 @@ class ImportSource extends ImportSourceHook
                 'VirtualMachine' => 'Virtual Machines',
                 'HostSystem' => 'Host Systems',
             ]),
+            'class' => 'autosubmit',
             'required' => true,
         ]);
+
+        $vm = ($form->getSentOrObjectSetting('object_type', 'HostSystem') === 'VirtualMachine');
+
+        if ($vm) {
+            static::addBoolean($form, 'guest_agent', [
+                'label' => $form->translate('Use Guest Agent'),
+                'description' => $form->translate(
+                    'Fetch additional data from the QEMU guest agent (additional user permissions needed: VM.Monitor)'
+                ),
+            ], 'n');
+        }
 
         $form->addElement('select', 'scheme', [
             'label' => $form->translate('Protocol'),
