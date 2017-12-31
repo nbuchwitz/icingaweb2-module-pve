@@ -123,7 +123,7 @@ class Api
                 "name" => $el['name'],
                 "type" => $el['type'],
                 "cpu" => (int)$el['maxcpu'],
-                "memory" => (int)$el['maxmem'],
+                "memory" => (int)$el['maxmem'] / 1048576, // 1024 * 1024
             ];
 
             if (isset($el['pool'])) {
