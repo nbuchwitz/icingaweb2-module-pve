@@ -209,7 +209,7 @@ class Api
 
                                 // ignore interfaces with dynamic configuration
                                 if (in_array($elem['0'],
-                                        ['ip', 'ip6']) && ($elem[1] === 'dhcp' || $elem[1] === 'slaac')) {
+                                        ['ip', 'ip6']) && ($elem[1] === 'dhcp' || $elem[1] === 'auto')) {
                                     continue;
                                 }
 
