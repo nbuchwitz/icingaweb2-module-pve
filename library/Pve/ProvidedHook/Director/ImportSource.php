@@ -30,11 +30,17 @@ class ImportSource extends ImportSourceHook
         $api->login();
         switch ($this->getSetting("object_type")) {
             case "VirtualMachine":
-                $data = $api->getVMs($this->getSetting('guest_agent') === 'y');
+                $guestAgent = $this->getSetting('guest_agent') === 'y';
+                $fetchNetwork = $this->getSetting('fetch_network') === 'y';
+                $data = $api->getVMs($guestAgent, $fetchNetwork);
 
                 break;
             case "HostSystem":
                 $data = $api->getNodes();
+
+                break;
+            case "Storage":
+                $data = $api->getStorage();
 
                 break;
         }
@@ -45,7 +51,22 @@ class ImportSource extends ImportSourceHook
 
     public function listColumns()
     {
-        return array_keys((array)current($this->fetchData()));
+        if (($this->getSetting("object_type")) === "VirtualMachine") {
+            // VMs
+            $columns = ["name", "vmid", "hostsystem", "pool", "vm_type", "cpu_count", "memory_size", "ha_flag"];
+
+            if ($this->getSetting('guest_agent') === 'y') {
+                $columns[] = "guest_agent";
+            }
+            if ($this->getSetting('fetch_network') === 'y') {
+                $columns[] = "network";
+            }
+        } else {
+            // PVE nodes
+            $columns = array_keys((array)current($this->fetchData(false)));
+        }
+
+        return $columns;
     }
 
     /**
@@ -53,7 +74,7 @@ class ImportSource extends ImportSourceHook
      */
     public static function getDefaultKeyColumnName()
     {
-        return 'vm_name';
+        return 'name';
     }
 
     public static function addSettingsFormFields(QuickForm $form)
@@ -74,12 +95,14 @@ class ImportSource extends ImportSourceHook
             'multiOptions' => $form->optionalEnum([
                 'VirtualMachine' => 'Virtual Machines',
                 'HostSystem' => 'Host Systems',
+                'Storage' => 'Storage',
             ]),
             'class' => 'autosubmit',
             'required' => true,
         ]);
 
         $vm = ($form->getSentOrObjectSetting('object_type', 'HostSystem') === 'VirtualMachine');
+        $storage = ($form->getSentOrObjectSetting('object_type', 'HostSystem') === 'Storage');
 
         if ($vm) {
             static::addBoolean($form, 'guest_agent', [
@@ -88,7 +111,24 @@ class ImportSource extends ImportSourceHook
                     'Fetch additional data from the QEMU guest agent (additional user permissions needed: VM.Monitor)'
                 ),
             ], 'n');
+            static::addBoolean($form, 'fetch_network', [
+                'label' => $form->translate('Fetch network interfaces'),
+                'description' => $form->translate(
+                    'Fetch network configuration from LXC config (and QEMU guest agent if enabled). Could be slow in larger environments due to the additional REST requests.'
+                ),
+            ], 'n');
         }
+        /**
+         * @TODO: implement detail method
+         */
+//        if ($storage) {
+//            static::addBoolean($form, 'storage_details', [
+//                'label' => $form->translate('Storage details'),
+//                'description' => $form->translate(
+//                    'Fetch additional storage details like type, thin provisioning configuration or mountpoint'
+//                ),
+//            ], 'n');
+//        }
 
         $form->addElement('select', 'scheme', [
             'label' => $form->translate('Protocol'),

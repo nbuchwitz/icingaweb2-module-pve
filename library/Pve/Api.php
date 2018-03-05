@@ -125,7 +125,15 @@ class Api
         return count($this->getQemuGuestAgentCommand($node, $vmid, "info")) > 0;
     }
 
-    public function getVMs($guestAgent = false)
+    public function getHAFlag($node, $type, $vmid)
+    {
+        $url = sprintf("/nodes/%s/%s/%s/status/current", $node, $type, $vmid);
+        $result = $this->get($url);
+
+        return ($result['ha']['managed'] === 1);
+    }
+
+    public function getVMs($guestAgent = false, $fetchNetwork = false)
     {
         foreach ($this->get("/cluster/resources?type=vm") as $el) {
             // filter VM templates
@@ -134,26 +142,22 @@ class Api
             }
 
             $vm = [
-                "vm_id" => $el['vmid'],
-                "vm_host" => $el['node'],
-                "vm_name" => $el['name'],
+                "vmid" => $el['vmid'],
+                "hostsystem" => $el['node'],
+                "name" => $el['name'],
                 "vm_type" => $el['type'],
-                "hardware_cpu" => (int)$el['maxcpu'],
-                "hardware_memory" => (int)$el['maxmem'] / 1048576, // 1024 * 1024
+                "cpu_count" => (int)$el['maxcpu'],
+                "memory_size" => (int)$el['maxmem'] / 1048576, // 1024 * 1024
             ];
 
-            if (isset($el['pool'])) {
-                $vm['vm_pool'] = $el['pool'];
-            }
+            $vm['pool'] = isset($el['pool']) ? $el['pool'] : '';
+            $vm['ha_flag'] = $this->getHAFlag($el['node'], $el['type'], $el['vmid']);
+
 
             // initialize guest agent variable
             if ($guestAgent) {
                 $vm['guest_agent'] = false;
             }
-
-            $url = sprintf("/nodes/%s/%s/status/current", $el['node'], $el['id']);
-            $status = $this->get($url);
-            $vm['vm_ha'] = $status['ha']['managed'] === 1;
 
             $interfaces = [];
             switch ($el['type']) {
@@ -161,8 +165,8 @@ class Api
                     if ($guestAgent) {
                         $hasAgent = $this->hasQEMUGuestAgent($el['node'], $el['vmid']);
 
-                        if ($hasAgent) {
-                            $network = $this->getQemuGuestAgentCommand($vm['vm_host'], $vm['vm_id'],
+                        if ($hasAgent && $fetchNetwork) {
+                            $network = $this->getQemuGuestAgentCommand($el['node'], $el['vmid'],
                                 'network-get-interfaces');
 
 
@@ -172,13 +176,15 @@ class Api
                                     continue;
                                 }
 
-                                $ipv4 = [];
-                                $ipv6 = [];
-                                foreach ($row['ip-addresses'] as $ip) {
-                                    if ($ip['ip-address-type'] === 'ipv4') {
-                                        $ipv4[] = sprintf("%s/%s", $ip['ip-address'], $ip['prefix']);
-                                    } else {
-                                        $ipv6[] = sprintf("%s/%s", $ip['ip-address'], $ip['prefix']);
+                                if (array_key_exists('ip-addresses', $row)) {
+                                    $ipv4 = [];
+                                    $ipv6 = [];
+                                    foreach ($row['ip-addresses'] as $ip) {
+                                        if ($ip['ip-address-type'] === 'ipv4') {
+                                            $ipv4[] = sprintf("%s/%s", $ip['ip-address'], $ip['prefix']);
+                                        } else {
+                                            $ipv6[] = sprintf("%s/%s", $ip['ip-address'], $ip['prefix']);
+                                        }
                                     }
                                 }
 
@@ -190,48 +196,50 @@ class Api
                             }
                         }
 
-                        $vm['guest_network'] = $interfaces;
                         $vm['guest_agent'] = $hasAgent;
                     }
                     break;
                 case "lxc":
                     $url = sprintf("/nodes/%s/%s/config", $el['node'], $el['id']);
 
-                    // get network interfaces
+                    if ($fetchNetwork) {
+                        // get network interfaces
+                        foreach ($this->get($url) as $key => $val) {
+                            if (preg_match('/^net.*/', $key)) {
+                                $interface = ['ip' => [], 'ip6' => []];
 
-                    foreach ($this->get($url) as $key => $val) {
-                        if (preg_match('/^net.*/', $key)) {
-                            $interface = ['ip' => [], 'ip6' => []];
+                                // @todo: better way of doing this?
+                                foreach (explode(',', $val) as $part) {
+                                    $elem = explode('=', $part);
 
-                            // @todo: better way of doing this?
-                            foreach (explode(',', $val) as $part) {
-                                $elem = explode('=', $part);
+                                    // ignore interfaces with dynamic configuration
+                                    if (in_array($elem['0'],
+                                            ['ip', 'ip6']) && ($elem[1] === 'dhcp' || $elem[1] === 'auto')) {
+                                        continue;
+                                    }
 
-                                // ignore interfaces with dynamic configuration
-                                if (in_array($elem['0'],
-                                        ['ip', 'ip6']) && ($elem[1] === 'dhcp' || $elem[1] === 'auto')) {
+                                    $interface[$elem[0]] = $elem[1];
+                                }
+
+                                // filter empty interfaces (eg. dynamic)
+                                if (empty($interface['ip']) && empty($interface['ip6'])) {
                                     continue;
                                 }
 
-                                $interface[$elem[0]] = $elem[1];
+                                $interfaces[$interface['name']] = [
+                                    'hwaddr' => $interface['hwaddr'],
+                                    'ipv4' => $interface['ip'],
+                                    'ipv6' => $interface['ip6'],
+                                ];
                             }
-
-                            // filter empty interfaces (eg. dynamic)
-                            if (empty($interface['ip']) && empty($interface['ip6'])) {
-                                continue;
-                            }
-
-                            $interfaces[$interface['name']] = [
-                                'hwaddr' => $interface['hwaddr'],
-                                'ipv4' => $interface['ip'],
-                                'ipv6' => $interface['ip6'],
-                            ];
                         }
                     }
                     break;
             }
 
-            $vm['guest_network'] = $interfaces;
+            if ($fetchNetwork) {
+                $vm['network_configuration'] = $interfaces;
+            }
 
             $vms[] = (object)$vm;
         }
@@ -243,17 +251,43 @@ class Api
     {
         $nodes = [];
 
-        foreach ($this->get(" / nodes") as $el) {
+        foreach ($this->get("/nodes") as $el) {
             $node = [
                 "name" => $el['node'],
-                "cpu" => (int)$el['maxcpu'],
-                "memory" => (int)$el['maxmem']
+                "cpu_count" => (int)$el['maxcpu'],
+                "memory_size" => (int)$el['maxmem'] / 1024 / 1024 / 1024,
             ];
 
             $nodes[] = (object)$node;
         }
 
         return $nodes;
+    }
+
+    public function getStorage($fetchDetails=false)
+    {
+        $storageList = [];
+
+        foreach ($this->get("/cluster/resources/?type=storage") as $el) {
+            $storage = [
+                "name" => $el["id"],
+                "storage" => $el["storage"],
+                "node" => $el["node"],
+                "storage_size" => (int)$el['maxdisk'] / 1024 / 1024 / 1024,
+                "offline" => ($el["status"] !== 'available')
+            ];
+
+            /**
+             * @TODO: implement
+             */
+            if($fetchDetails) {
+                //$details = $this->getStorageDetails($storage["name"]);
+            }
+
+            $storageList[] = (object)$storage;
+        }
+
+        return $storageList;
     }
 
     protected function get($url, $body = array())
@@ -282,6 +316,8 @@ class Api
             case "post":
                 return $this->curl()->post($url, $body, $header)['data'];
                 break;
+            default:
+                return [];
         }
     }
 
