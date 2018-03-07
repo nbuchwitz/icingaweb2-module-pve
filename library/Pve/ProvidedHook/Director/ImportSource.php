@@ -22,51 +22,38 @@ class ImportSource extends ImportSourceHook
         return 'Proxmox Virtual Environment (PVE)';
     }
 
-    public function fetchData()
-    {
-        $data = [];
-
-        $api = $this->api();
-        $api->login();
-        switch ($this->getSetting("object_type")) {
-            case "VirtualMachine":
-                $guestAgent = $this->getSetting('guest_agent') === 'y';
-                $fetchNetwork = $this->getSetting('fetch_network') === 'y';
-                $data = $api->getVMs($guestAgent, $fetchNetwork);
-
-                break;
-            case "HostSystem":
-                $data = $api->getNodes();
-
-                break;
-            case "Storage":
-                $data = $api->getStorage();
-
-                break;
-        }
-        $api->logout();
-
-        return $data;
-    }
-
     public function listColumns()
     {
-        if (($this->getSetting("object_type")) === "VirtualMachine") {
-            // VMs
-            $columns = ["name", "vmid", "hostsystem", "pool", "vm_type", "cpu_count", "memory_size", "ha_flag"];
+        return $this->callOnManagedObject('getColumns');
+    }
 
-            if ($this->getSetting('guest_agent') === 'y') {
-                $columns[] = "guest_agent";
-            }
-            if ($this->getSetting('fetch_network') === 'y') {
-                $columns[] = "network";
-            }
-        } else {
-            // PVE nodes
-            $columns = array_keys((array)current($this->fetchData(false)));
-        }
+    protected function getManagedObjectClass()
+    {
+        return 'Icinga\\Module\\Pve\\ManagedObject\\'
+            . $this->getSetting('object_type');
+    }
 
-        return $columns;
+    protected function callOnManagedObject($method)
+    {
+        $params = func_get_args();
+        array_shift($params);
+
+        return call_user_func_array(array(
+            $this->getManagedObjectClass(),
+            $method
+        ), $params);
+    }
+
+    public function fetchData()
+    {
+        $api = $this->api();
+        $api->login();
+
+        $objects = $this->callOnManagedObject('fetch', $api);
+
+        $api->logout();
+
+        return $objects;
     }
 
     /**
@@ -93,8 +80,8 @@ class ImportSource extends ImportSourceHook
                 'The managed PVE object type this Import Source should fetch'
             ),
             'multiOptions' => $form->optionalEnum([
-                'VirtualMachine' => 'Virtual Machines',
-                'HostSystem' => 'Host Systems',
+                'VirtualMachine' => 'Virtual Machine',
+                'HostSystem' => 'Host System',
                 'Storage' => 'Storage',
             ]),
             'class' => 'autosubmit',
@@ -102,7 +89,7 @@ class ImportSource extends ImportSourceHook
         ]);
 
         $vm = ($form->getSentOrObjectSetting('object_type', 'HostSystem') === 'VirtualMachine');
-        $storage = ($form->getSentOrObjectSetting('object_type', 'HostSystem') === 'Storage');
+        $vm = ($form->getSentOrObjectSetting('object_type', 'HostSystem') === 'VirtualMachine');
 
         if ($vm) {
             static::addBoolean($form, 'guest_agent', [
