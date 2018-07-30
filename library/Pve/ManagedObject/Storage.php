@@ -56,7 +56,11 @@ class Storage extends ManagedObject
         $storages = [];
 
         $data = $api->get(sprintf("/nodes/%s/storage", $node));
+
         foreach ($data as $el) {
+            $content = (array)explode(",", $el['content']);
+            asort($content);
+
             $storages[$el['storage']] = array(
                 "storage_name" => $el['storage'],
                 "storage_size" => (int)$el['total'] / 1024 / 1024 / 1024,
@@ -64,9 +68,11 @@ class Storage extends ManagedObject
                 "storage_enabled" => $el['enabled'] == 1,
                 "storage_shared" => $el['shared'] == 1,
                 "storage_type" => $el['type'],
-                "storage_content" => explode(",", $el['content']),
+                "storage_content" => $content,
             );
         }
+
+        asort($storages);
 
         return $storages;
     }
