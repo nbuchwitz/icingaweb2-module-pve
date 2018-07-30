@@ -162,7 +162,7 @@ class DirectorConfig
             $this->createSubscriptionServiceCommand(),
             $this->createUpdateServiceCommand(),
             $this->createStorageServiceCommand(),
-            $this->createStorageReplicationCommand(),
+            $this->createReplicationCommand(),
             $this->createVMServiceCommand(),
             $this->createCPUServiceCommand(),
             $this->createMemoryServiceCommand(),
@@ -240,9 +240,9 @@ class DirectorConfig
     /**
      * @return IcingaCommand
      */
-    protected function createStorageReplicationCommand()
+    protected function createReplicationCommand()
     {
-        $name = "PVE storage replication check command";
+        $name = "PVE replication check command";
         $args = [
             '--mode' => (object)['value' => 'replication']
         ];
@@ -261,7 +261,18 @@ class DirectorConfig
             '--name' => (object)[
                 'value' => '$pve_resource_name$',
                 'description' => 'Name of vm to check',
-                'required' => true,
+            ],
+            '--vmid' => (object)[
+                'value' => '$pve_vmid$',
+                'description' => 'VMID of vm to check',
+            ],
+            '--ignore-vm-status' => (object)[
+                'set_if' => '$pve_ignore_vm_status$',
+                'description' => 'Ignore VM status'
+            ],
+            '--expected-vm-status' => (object)[
+                'value' => '$pve_expected_vm_status$',
+                'description' => 'Expected VM status (running, paused or stopped)',
             ],
             '-M' => (object)[
                 'set_if' => '$pve_unit_mb$',
