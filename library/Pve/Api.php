@@ -243,7 +243,7 @@ class Api
     {
         $nodes = [];
 
-        foreach ($this->get(" / nodes") as $el) {
+        foreach ($this->get("/nodes") as $el) {
             $node = [
                 "name" => $el['node'],
                 "cpu" => (int)$el['maxcpu'],
