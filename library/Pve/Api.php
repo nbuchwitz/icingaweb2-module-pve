@@ -2,8 +2,6 @@
 
 namespace Icinga\Module\Pve;
 
-use Icinga\Exception\ConfigurationError;
-
 /**
  * Class Api
  *
@@ -113,7 +111,7 @@ class Api
         $body = "command=" . urlencode($command);
         $data = $this->post($url, $body);
 
-        if (isset($data['result'])) {
+        if (isset($data['result']) && !isset($data['result']['error'])) {
             return $data['result'];
         } else {
             return [];
@@ -168,7 +166,7 @@ class Api
 
                             foreach ($network as $row) {
                                 // skip loopback interface
-                                if (preg_match('/^lo.*/', $row['name'])) {
+                                if (preg_match('/^(lo|Loopback).*/', $row['name'])) {
                                     continue;
                                 }
 
