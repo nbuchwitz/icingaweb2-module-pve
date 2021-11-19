@@ -37,6 +37,10 @@ class ImportSource extends ImportSourceHook
                 $data = $api->getNodes();
 
                 break;
+            case "Pools":
+                $data = $api->getPools();
+
+                break;
         }
         $api->logout();
 
@@ -74,6 +78,7 @@ class ImportSource extends ImportSourceHook
             'multiOptions' => $form->optionalEnum([
                 'VirtualMachine' => 'Virtual Machines',
                 'HostSystem' => 'Host Systems',
+                'Pools' => 'Pools',
             ]),
             'class' => 'autosubmit',
             'required' => true,
