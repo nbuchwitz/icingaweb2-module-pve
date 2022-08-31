@@ -123,6 +123,16 @@ class Api
         return count($this->getQemuGuestAgentCommand($node, $vmid, "info")) > 0;
     }
 
+    public function getPools() 
+    {
+	$pools=[];
+	foreach ($this->get("/pools") as $pl) {
+		$pool = [ 'pool_id' => $pl['poolid'], ];
+		$pools[]=(object)$pool;
+	}
+	return $pools;
+    }
+
     public function getVMs($guestAgent = false)
     {
         foreach ($this->get("/cluster/resources?type=vm") as $el) {
@@ -199,7 +209,7 @@ class Api
 
                     foreach ($this->get($url) as $key => $val) {
                         if (preg_match('/^net.*/', $key)) {
-                            $interface = ['ip' => [], 'ip6' => []];
+                            $interface = ['ip' => [], 'ip6' => [], 'hwaddr' => 'N/A'];
 
                             // @todo: better way of doing this?
                             foreach (explode(',', $val) as $part) {
