@@ -247,6 +247,7 @@ class Api
                     break;
             }
 
+            ksort($interfaces,  SORT_NATURAL);
             $vm['guest_network'] = $interfaces;
 
             $vms[] = (object)$vm;
