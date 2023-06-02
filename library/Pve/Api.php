@@ -168,6 +168,9 @@ class Api
                 case "qemu":
 		    $url = sprintf("/nodes/%s/qemu/%s/config", $vm['vm_host'], $vm['vm_id']);
 		    $config = $this->get($url);
+		    if (array_key_exists('ostype',$config)) {
+		        $vm['ostype'] = trim(stripslashes($config['ostype']));
+		    }
 		    if (array_key_exists('description',$config)) {
 		        $vm['description'] = trim(stripslashes($config['description']));
 		    }
@@ -213,6 +216,9 @@ class Api
 
                     // get network interfaces
                     foreach ($this->get($url) as $key => $val) {
+                        if (preg_match('/ostype/', $key)) {
+			    $vm['ostype'] = trim(stripslashes($val));
+			}
                         if (preg_match('/description/', $key)) {
 			    $vm['description'] = trim(stripslashes($val));
 			}
