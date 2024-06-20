@@ -133,7 +133,16 @@ class Api
 	return $pools;
     }
 
-    public function getVMs($guestAgent = false)
+    private function getVmDescription($host, $vmid) {
+        $url = sprintf("/nodes/%s/%s/config", $host, $vmid);
+        $config = $this->get($url);
+
+        $description = $config['description'] ?? "";
+
+        return trim(stripslashes($description));
+    }
+
+    public function getVMs($guestAgent = false, $description = false, $ha = false)
     {
         foreach ($this->get("/cluster/resources?type=vm") as $el) {
             // filter VM templates
@@ -159,13 +168,20 @@ class Api
                 $vm['guest_agent'] = false;
             }
 
-            $url = sprintf("/nodes/%s/%s/status/current", $el['node'], $el['id']);
-            $status = $this->get($url);
-            $vm['vm_ha'] = $status['ha']['managed'] === 1;
+            if ($ha) {
+                // fetch HA state if enabled in configuration
+                $url = sprintf("/nodes/%s/%s/status/current", $el['node'], $el['id']);
+                $status = $this->get($url);
+                $vm['vm_ha'] = $status['ha']['managed'] === 1;
+            }
 
             $interfaces = [];
             switch ($el['type']) {
                 case "qemu":
+                    if ($description) {
+                        $vm['description'] = $this->getVmDescription($el['node'], $el['id']);
+                    }
+
                     if ($guestAgent) {
                         $hasAgent = $this->hasQEMUGuestAgent($el['node'], $el['vmid']);
 
@@ -209,7 +225,10 @@ class Api
                     // get network interfaces
 
                     foreach ($this->get($url) as $key => $val) {
-                        if (preg_match('/^net.*/', $key)) {
+                        if($key == "description" and $description) {
+                            $vm['description'] = trim(stripslashes($val));
+                        }
+                        elseif (preg_match('/^net.*/', $key)) {
                             $interface = ['ip' => [], 'ip6' => [], 'hwaddr' => 'N/A'];
 
                             // @todo: better way of doing this?

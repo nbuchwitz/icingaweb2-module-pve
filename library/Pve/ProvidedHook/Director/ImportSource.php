@@ -30,7 +30,11 @@ class ImportSource extends ImportSourceHook
         $api->login();
         switch ($this->getSetting("object_type")) {
             case "VirtualMachine":
-                $data = $api->getVMs($this->getSetting('guest_agent') === 'y');
+                $fetchGuestAgent = $this->getSetting('vm_guest_agent') === 'y';
+                $fetchDescription = $this->getSetting('vm_description') === 'y';
+                $fetchHaState = $this->getSetting('vm_ha') === 'y';
+
+                $data = $api->getVMs($fetchGuestAgent, $fetchDescription, $fetchHaState);
 
                 break;
             case "HostSystem":
@@ -87,10 +91,24 @@ class ImportSource extends ImportSourceHook
         $vm = ($form->getSentOrObjectSetting('object_type', 'HostSystem') === 'VirtualMachine');
 
         if ($vm) {
-            static::addBoolean($form, 'guest_agent', [
+            static::addBoolean($form, 'vm_guest_agent', [
                 'label' => $form->translate('Use Guest Agent'),
                 'description' => $form->translate(
                     'Fetch additional data from the QEMU guest agent (additional user permissions needed: VM.Monitor)'
+                ),
+            ], 'n');
+
+            static::addBoolean($form, 'vm_ha', [
+                'label' => $form->translate('Fetch VM HA state'),
+                'description' => $form->translate(
+                    'Fetch VM HA state. This will result in an additional query for each VM, thus can be slow for larger environments.'
+                ),
+            ], 'n');
+
+            static::addBoolean($form, 'vm_description', [
+                'label' => $form->translate('Fetch VM description'),
+                'description' => $form->translate(
+                    'Fetch VM description from configuration. This will result in an additional query for each VM, thus can be slow for larger environments.'
                 ),
             ], 'n');
         }
