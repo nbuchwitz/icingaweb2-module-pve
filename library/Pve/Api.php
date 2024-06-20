@@ -166,12 +166,6 @@ class Api
             $interfaces = [];
             switch ($el['type']) {
                 case "qemu":
-		    $url = sprintf("/nodes/%s/qemu/%s/config", $vm['vm_host'], $vm['vm_id']);
-		    $config = $this->get($url);
-		    if (array_key_exists('description',$config)) {
-		        $vm['description'] = trim(stripslashes($config['description']));
-		    }
-
                     if ($guestAgent) {
                         $hasAgent = $this->hasQEMUGuestAgent($el['node'], $el['vmid']);
 
@@ -213,11 +207,9 @@ class Api
                     $url = sprintf("/nodes/%s/%s/config", $el['node'], $el['id']);
 
                     // get network interfaces
+
                     foreach ($this->get($url) as $key => $val) {
-                        if (preg_match('/description/', $key)) {
-			    $vm['description'] = trim(stripslashes($val));
-			}
-			if (preg_match('/^net.*/', $key)) {
+                        if (preg_match('/^net.*/', $key)) {
                             $interface = ['ip' => [], 'ip6' => [], 'hwaddr' => 'N/A'];
 
                             // @todo: better way of doing this?
