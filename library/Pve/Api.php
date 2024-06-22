@@ -118,7 +118,11 @@ class Api
 
     public function hasQEMUGuestAgent($node, $vmid)
     {
-        return count($this->getQemuGuestAgentCommand($node, $vmid, "info")) > 0;
+        try {
+            return count($this->getQemuGuestAgentCommand($node, $vmid, "info")) > 0;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     public function getPools() 
