@@ -3,50 +3,70 @@
 namespace Icinga\Module\Pve;
 
 /**
- * Class Api
+ * Proxmox VE API class
  *
- * This is your main entry point when working with this library
+ * Encapsulates the API communication with a Proxmox VE api endpoints
+ * and provides functions for the import sources.
+ *
+ * @package Pve
+ * @author  Nicolai Buchwitz <nb@tipi-net.de>
  */
 class Api
 {
-    /** @var CurlLoader */
-    private $curl;
+    /**
+     * @var CurlLoader curl loader instance for API calls.
+     */
+    private $_curl;
 
-    /** @var string */
-    private $host;
+    /**
+     * @var string hostname of the API server
+     */
+    private $_host;
 
-    /** @var integer */
-    private $port;
+    /**
+     * @var integer port of the API server
+     */
+    private $_port;
 
-    /** @var string */
-    private $realm;
+    /**
+     * @var string authentification realm
+     */
+    private $_realm;
 
-    /** @var string */
-    private $user;
+    /**
+     * @var string username
+     */
+    private $_user;
 
-    /** @var int */
-    private $loginTimestamp = 0;
+    /**
+     * @var int timestamp of last login
+     */
+    private $_loginTimestamp = 0;
 
-    /** @var array */
-    private $loginTicket;
+    /**
+     * @var array login ticket
+     */
+    private $_loginTicket;
 
-    /** @var string */
-    private $loginToken;
+    /**
+     * @var string api token for login
+     */
+    private $_loginToken;
 
     /**
      * Api constructor.
      *
-     * @param string $host
+     * @param string  $host
      * @param integer $port
-     * @param string $realm
-     * @param string $user
+     * @param string  $realm
+     * @param string  $user
      */
     public function __construct($host, $port, $realm, $user)
     {
-        $this->host = $host;
-        $this->port = $port;
-        $this->realm = $realm;
-        $this->user = $user;
+        $this->_host = $host;
+        $this->_port = $port;
+        $this->_realm = $realm;
+        $this->_user = $user;
     }
 
     /**
@@ -54,33 +74,33 @@ class Api
      */
     public function curl()
     {
-        if ($this->curl === null) {
-            $this->curl = new CurlLoader($this->host(), $this->port());
+        if ($this->_curl === null) {
+            $this->_curl = new CurlLoader($this->host(), $this->port());
         }
 
-        return $this->curl;
+        return $this->_curl;
     }
 
     /**
-     * @return string
+     * @return string hostname
      */
     protected function host()
     {
-        return $this->host;
+        return $this->_host;
     }
 
     /**
-     * @return string
+     * @return string api port
      */
     protected function port()
     {
-        return $this->port;
+        return $this->_port;
     }
 
     /**
      * Builds our base url
      *
-     * @return string
+     * @return string complete api url
      */
     protected function makeLocation()
     {
@@ -94,8 +114,8 @@ class Api
      */
     protected function hasValidTicket()
     {
-        if ($this->loginTicket == null || $this->loginTimestamp >= (time() + 7200)) {
-            $this->loginTimestamp = null;
+        if ($this->_loginTicket == null || $this->_loginTimestamp >= (time() + 7200)) {
+            $this->_loginTimestamp = null;
             $this->curl()->forgetCookie();
             return false;
         } else {
@@ -142,7 +162,7 @@ class Api
                 }
             }
 
-            $storages[] =  (object)[
+            $storages[] = (object) [
                 "storage_id" => $storage["storage"],
                 "content" => $storage["content"],
                 "shared" => (int) ($storage["shared"] ?? 0) === 1,
@@ -166,19 +186,20 @@ class Api
     {
         $pools = [];
         foreach ($this->get("/pools") as $pl) {
-            $pool = [ 'pool_id' => $pl['poolid'] ];
+            $pool = ['pool_id' => $pl['poolid']];
 
             if ($fetchDetails) {
                 $details = $this->getPoolDetails($pl['poolid']);
                 $pool["comment"] = $details["comment"] ?? "";
             }
 
-            $pools[]=(object)$pool;
+            $pools[] = (object) $pool;
         }
         return $pools;
     }
 
-    private function getVmDescription($host, $vmid) {
+    private function getVmDescription($host, $vmid)
+    {
         $url = sprintf("/nodes/%s/%s/config", $host, $vmid);
         $config = $this->get($url);
 
@@ -202,8 +223,8 @@ class Api
                 "vm_host" => $el['node'],
                 "vm_name" => $el['name'],
                 "vm_type" => $el['type'],
-                "hardware_cpu" => (int)$el['maxcpu'],
-                "hardware_memory" => (int)$el['maxmem'] / 1048576, // 1024 * 1024
+                "hardware_cpu" => (int) $el['maxcpu'],
+                "hardware_memory" => (int) $el['maxmem'] / 1024 * 1024,
             ];
 
             if (isset($el['pool'])) {
@@ -224,92 +245,97 @@ class Api
 
             $interfaces = [];
             switch ($el['type']) {
-                case "qemu":
-                    if ($description) {
-                        $vm['description'] = $this->getVmDescription($el['node'], $el['id']);
-                    }
+            case "qemu":
+                if ($description) {
+                    $vm['description'] = $this->getVmDescription($el['node'], $el['id']);
+                }
 
-                    if ($guestAgent) {
-                        $hasAgent = $this->hasQEMUGuestAgent($el['node'], $el['vmid']);
+                if ($guestAgent) {
+                    $hasAgent = $this->hasQEMUGuestAgent($el['node'], $el['vmid']);
 
-                        if ($hasAgent) {
-                            $network = $this->getQemuGuestAgentCommand($vm['vm_host'], $vm['vm_id'],
-                                'network-get-interfaces');
+                    if ($hasAgent) {
+                        $network = $this->getQemuGuestAgentCommand(
+                            $vm['vm_host'],
+                            $vm['vm_id'],
+                            'network-get-interfaces'
+                        );
 
 
-                            foreach ($network as $row) {
-                                // skip loopback interface
-                                if (preg_match('/^(lo|Loopback).*/', $row['name'])) {
-                                    continue;
-                                }
-
-                                $ipv4 = [];
-                                $ipv6 = [];
-                                $ips = $row['ip-addresses'] ?? array();
-                                foreach ($ips as $ip) {
-                                    if ($ip['ip-address-type'] === 'ipv4') {
-                                        $ipv4[] = sprintf("%s/%s", $ip['ip-address'], $ip['prefix']);
-                                    } else {
-                                        $ipv6[] = sprintf("%s/%s", $ip['ip-address'], $ip['prefix']);
-                                    }
-                                }
-
-                                $interfaces[$row['name']] = [
-                                    'hwaddr' => $row['hardware-address'] ?? "",
-                                    'ipv4' => $ipv4,
-                                    'ipv6' => $ipv6
-                                ];
-                            }
-                        }
-
-                        $vm['guest_network'] = $interfaces;
-                        $vm['guest_agent'] = $hasAgent;
-                    }
-                    break;
-                case "lxc":
-                    $url = sprintf("/nodes/%s/%s/config", $el['node'], $el['id']);
-
-                    // get network interfaces
-
-                    foreach ($this->get($url) as $key => $val) {
-                        if($key == "description" and $description) {
-                            $vm['description'] = trim(stripslashes($val));
-                        }
-                        elseif (preg_match('/^net.*/', $key)) {
-                            $interface = ['ip' => [], 'ip6' => [], 'hwaddr' => 'N/A'];
-
-                            // @todo: better way of doing this?
-                            foreach (explode(',', $val) as $part) {
-                                $elem = explode('=', $part);
-
-                                // ignore interfaces with dynamic configuration
-                                if (in_array($elem['0'],
-                                        ['ip', 'ip6']) && ($elem[1] === 'dhcp' || $elem[1] === 'auto')) {
-                                    continue;
-                                }
-
-                                $interface[$elem[0]] = $elem[1];
-                            }
-
-                            // filter empty interfaces (eg. dynamic)
-                            if (empty($interface['ip']) && empty($interface['ip6'])) {
+                        foreach ($network as $row) {
+                            // skip loopback interface
+                            if (preg_match('/^(lo|Loopback).*/', $row['name'])) {
                                 continue;
                             }
 
-                            $interfaces[$interface['name']] = [
-                                'hwaddr' => $interface['hwaddr'],
-                                'ipv4' => $interface['ip'],
-                                'ipv6' => $interface['ip6'],
+                            $ipv4 = [];
+                            $ipv6 = [];
+                            $ips = $row['ip-addresses'] ?? array();
+                            foreach ($ips as $ip) {
+                                if ($ip['ip-address-type'] === 'ipv4') {
+                                    $ipv4[] = sprintf("%s/%s", $ip['ip-address'], $ip['prefix']);
+                                } else {
+                                    $ipv6[] = sprintf("%s/%s", $ip['ip-address'], $ip['prefix']);
+                                }
+                            }
+
+                            $interfaces[$row['name']] = [
+                                'hwaddr' => $row['hardware-address'] ?? "",
+                                'ipv4' => $ipv4,
+                                'ipv6' => $ipv6
                             ];
                         }
                     }
-                    break;
+
+                    $vm['guest_network'] = $interfaces;
+                    $vm['guest_agent'] = $hasAgent;
+                }
+                break;
+            case "lxc":
+                $url = sprintf("/nodes/%s/%s/config", $el['node'], $el['id']);
+
+                // get network interfaces
+
+                foreach ($this->get($url) as $key => $val) {
+                    if ($key == "description" and $description) {
+                        $vm['description'] = trim(stripslashes($val));
+                    } elseif (preg_match('/^net.*/', $key)) {
+                        $interface = ['ip' => [], 'ip6' => [], 'hwaddr' => 'N/A'];
+
+                        // @todo: better way of doing this?
+                        foreach (explode(',', $val) as $part) {
+                            $elem = explode('=', $part);
+
+                            // ignore interfaces with dynamic configuration
+                            if (in_array(
+                                $elem['0'],
+                                ['ip', 'ip6']
+                            ) && ($elem[1] === 'dhcp' || $elem[1] === 'auto')
+                            ) {
+                                continue;
+                            }
+
+                            $interface[$elem[0]] = $elem[1];
+                        }
+
+                        // filter empty interfaces (eg. dynamic)
+                        if (empty($interface['ip']) && empty($interface['ip6'])) {
+                            continue;
+                        }
+
+                        $interfaces[$interface['name']] = [
+                            'hwaddr' => $interface['hwaddr'],
+                            'ipv4' => $interface['ip'],
+                            'ipv6' => $interface['ip6'],
+                        ];
+                    }
+                }
+                break;
             }
 
-            ksort($interfaces,  SORT_NATURAL);
+            ksort($interfaces, SORT_NATURAL);
             $vm['guest_network'] = $interfaces;
 
-            $vms[] = (object)$vm;
+            $vms[] = (object) $vm;
         }
 
         return $vms;
@@ -322,11 +348,11 @@ class Api
         foreach ($this->get("/nodes") as $el) {
             $node = [
                 "name" => $el['node'],
-                "cpu" => (int)$el['maxcpu'],
-                "memory" => (int)$el['maxmem']
+                "cpu" => (int) $el['maxcpu'],
+                "memory" => (int) $el['maxmem']
             ];
 
-            $nodes[] = (object)$node;
+            $nodes[] = (object) $node;
         }
 
         return $nodes;
@@ -341,10 +367,10 @@ class Api
     {
         $headers = [];
 
-        if ($this->loginToken) {
-            $headers["Authorization"] =  "PVEAPIToken=" . $this->user . "@" . $this->realm . "!" . $this->loginToken;
+        if ($this->_loginToken) {
+            $headers["Authorization"] = "PVEAPIToken=" . $this->_user . "@" . $this->_realm . "!" . $this->_loginToken;
         } else {
-            $headers["CSRFPreventionToken"] = $this->loginTicket['CSRFPreventionToken'];
+            $headers["CSRFPreventionToken"] = $this->_loginTicket['CSRFPreventionToken'];
         }
 
         return $headers;
@@ -362,7 +388,7 @@ class Api
 
     protected function request($method, $url, $body = array(), $additionalHeaders = array())
     {
-        if (!$this->loginToken and !$this->hasValidTicket()) {
+        if (!$this->_loginToken and !$this->hasValidTicket()) {
             return;
         }
 
@@ -370,10 +396,10 @@ class Api
 
         $url = $this->makeLocation() . $url;
         switch ($method) {
-            case "get":
-                return $this->curl()->get($url, $body, $headers)['data'];
-            case "post":
-                return $this->curl()->post($url, $body, $headers)['data'];
+        case "get":
+            return $this->curl()->get($url, $body, $headers)['data'];
+        case "post":
+            return $this->curl()->post($url, $body, $headers)['data'];
         }
     }
 
@@ -382,7 +408,7 @@ class Api
      */
     public function loginWithToken($token)
     {
-        $this->loginToken = $token;
+        $this->_loginToken = $token;
     }
 
     /**
@@ -396,21 +422,23 @@ class Api
             return;
         }
 
-        $body = http_build_query([
-            "realm" => $this->realm,
-            "username" => $this->user,
-            "password" => $password
-        ]);
+        $body = http_build_query(
+            [
+                "realm" => $this->_realm,
+                "username" => $this->_user,
+                "password" => $password
+            ]
+        );
 
         $url = $this->makeLocation() . "/access/ticket";
         $result = $this->curl()->post($url, $body);
         unset($body);
 
         if (isset($result['data'])) {
-            $this->loginTimestamp = time();
-            $this->loginTicket = $result['data'];
+            $this->_loginTimestamp = time();
+            $this->_loginTicket = $result['data'];
 
-            $this->curl()->addCookie("PVEAuthCookie", $this->loginTicket['ticket']);
+            $this->curl()->addCookie("PVEAuthCookie", $this->_loginTicket['ticket']);
         }
     }
 
@@ -419,8 +447,8 @@ class Api
      */
     public function logout()
     {
-        $this->loginTimestamp = null;
-        $this->loginTicket = null;
+        $this->_loginTimestamp = null;
+        $this->_loginTicket = null;
         $this->curl()->forgetCookie();
     }
 }

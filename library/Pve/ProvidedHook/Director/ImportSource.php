@@ -14,11 +14,14 @@ use Icinga\Module\Pve\Api;
  */
 class ImportSource extends ImportSourceHook
 {
-    /** @var  Api */
+    /**
+     * @var Api 
+     */
     protected $api;
 
     /**
      * Default authentification type. For now this is legacy, but will be changed to token in the future.
+     *
      * @var string
      * */
     public static $defaultAuthType = "legacy";
@@ -50,26 +53,26 @@ class ImportSource extends ImportSourceHook
         }
        
         switch ($this->getSetting("object_type")) {
-            case "VirtualMachine":
-                $fetchGuestAgent = $this->getSetting('vm_guest_agent') === 'y';
-                $fetchDescription = $this->getSetting('vm_description') === 'y';
-                $fetchHaState = $this->getSetting('vm_ha') === 'y';
+        case "VirtualMachine":
+            $fetchGuestAgent = $this->getSetting('vm_guest_agent') === 'y';
+            $fetchDescription = $this->getSetting('vm_description') === 'y';
+            $fetchHaState = $this->getSetting('vm_ha') === 'y';
 
-                $data = $api->getVMs($fetchGuestAgent, $fetchDescription, $fetchHaState);
+            $data = $api->getVMs($fetchGuestAgent, $fetchDescription, $fetchHaState);
 
-                break;
-            case "HostSystem":
-                $data = $api->getNodes();
+            break;
+        case "HostSystem":
+            $data = $api->getNodes();
 
-                break;
-            case "Pools":
-                $data = $api->getPools();
+            break;
+        case "Pools":
+            $data = $api->getPools();
 
-                break;
+            break;
 
-            case "Storage":
-                $data = $api->getStorages();
-                break;
+        case "Storage":
+            $data = $api->getStorages();
+            break;
         }
 
         $api->logout();
@@ -93,69 +96,86 @@ class ImportSource extends ImportSourceHook
     public static function addSettingsFormFields(QuickForm $form)
     {
         if (!function_exists('curl_version')) {
-            $form->addError($form->translate(
-                'The PHP CURL extension (php-curl) is not installed/enabled'
-            ));
+            $form->addError(
+                $form->translate(
+                    'The PHP CURL extension (php-curl) is not installed/enabled'
+                )
+            );
 
             return;
         }
 
-        $form->addElement('select', 'object_type', [
+        $form->addElement(
+            'select', 'object_type', [
             'label' => $form->translate('Object Type'),
             'description' => $form->translate(
                 'The managed PVE object type this Import Source should fetch'
             ),
-            'multiOptions' => $form->optionalEnum([
+            'multiOptions' => $form->optionalEnum(
+                [
                 'VirtualMachine' => 'Virtual Machines',
                 'HostSystem' => 'Host Systems',
                 'Storage' => 'Storages',
                 'Pools' => 'Pools',
-            ]),
+                ]
+            ),
             'class' => 'autosubmit',
             'required' => true,
-        ]);
+            ]
+        );
 
         $vm = ($form->getSentOrObjectSetting('object_type', 'HostSystem') === 'VirtualMachine');
 
         if ($vm) {
-            static::addBoolean($form, 'vm_guest_agent', [
+            static::addBoolean(
+                $form, 'vm_guest_agent', [
                 'label' => $form->translate('Fetch Guest Agent data'),
                 'description' => $form->translate(
                     'Fetch additional data from the QEMU guest agent (additional user permissions needed: VM.Monitor)'
                 ),
-            ], 'n');
+                ], 'n'
+            );
 
-            static::addBoolean($form, 'vm_ha', [
+            static::addBoolean(
+                $form, 'vm_ha', [
                 'label' => $form->translate('Fetch VM HA state'),
                 'description' => $form->translate(
                     'Fetch VM HA state. This will result in an additional query for each VM, thus can be slow for larger environments.'
                 ),
-            ], 'n');
+                ], 'n'
+            );
 
-            static::addBoolean($form, 'vm_description', [
+            static::addBoolean(
+                $form, 'vm_description', [
                 'label' => $form->translate('Fetch VM description'),
                 'description' => $form->translate(
                     'Fetch VM description from configuration. This will result in an additional query for each VM, thus can be slow for larger environments.'
                 ),
-            ], 'n');
+                ], 'n'
+            );
         }
 
-        static::addBoolean($form, 'ssl_verify_peer', [
+        static::addBoolean(
+            $form, 'ssl_verify_peer', [
             'label' => $form->translate('Verify Peer'),
             'description' => $form->translate(
                 'Whether we should check that our peer\'s certificate has'
                 . ' been signed by a trusted CA. This is strongly recommended.'
             )
-        ], 'y');
-        static::addBoolean($form, 'ssl_verify_host', array(
+            ], 'y'
+        );
+        static::addBoolean(
+            $form, 'ssl_verify_host', array(
             'label' => $form->translate('Verify Host'),
             'description' => $form->translate(
                 'Whether we should check that the certificate matches the'
                 . 'configured host'
             )
-        ), 'y');
+            ), 'y'
+        );
 
-        $form->addElement('text', 'host', array(
+        $form->addElement(
+            'text', 'host', array(
             'label' => $form->translate('PVE host'),
             'description' => $form->translate(
                 'In most cases you want to use a fully qualified domain name (and should'
@@ -164,32 +184,40 @@ class ImportSource extends ImportSourceHook
                 . ' HTTP(s) ports'
             ),
             'required' => true,
-        ))->add;
+            )
+        )->add;
 
-        $form->addElement('text', 'port', array(
+        $form->addElement(
+            'text', 'port', array(
             'label' => $form->translate('PVE port'),
             'description' => $form->translate(
                 'Default port is 8006'
             ),
             'placeholder' => '8006',
             'required' => true,
-        ));
+            )
+        );
 
 
-        $form->addElement('select', 'auth_type', [
+        $form->addElement(
+            'select', 'auth_type', [
             'label' => $form->translate('Authentification Type'),
             'description' => $form->translate(
                 'Authentification type can be either token based or legacy password'
             ),
-            'multiOptions' => $form->optionalEnum([
+            'multiOptions' => $form->optionalEnum(
+                [
                 'token' => 'Token',
                 'legacy' => 'Password',
-            ]),
+                ]
+            ),
             'class' => 'autosubmit',
             'required' => true,
-        ]);
+            ]
+        );
 
-        $form->addElement('select', 'realm', [
+        $form->addElement(
+            'select', 'realm', [
             'label' => $form->translate('Realm'),
             'multiOptions' => [
                 'pam' => $form->translate('Linux PAM standard authentication'),
@@ -198,35 +226,42 @@ class ImportSource extends ImportSourceHook
             'class' => 'autosubmit',
             'value' => 'pam',
             'required' => true,
-        ]);
+            ]
+        );
 
 
-        $form->addElement('text', 'username', array(
+        $form->addElement(
+            'text', 'username', array(
             'label' => $form->translate('Username'),
             'description' => $form->translate(
                 'Will be used for API authentication against your PVE host'
             ),
             'required' => true,
-        ));
+            )
+        );
 
         $legacyAuth = ($form->getSentOrObjectSetting('auth_type', self::$defaultAuthType) === 'legacy');
 
         if ($legacyAuth) {
-            $form->addElement('password', 'password', array(
+            $form->addElement(
+                'password', 'password', array(
                 'label' => $form->translate('Password'),
                 'description' => $form->translate(
                     'Password for the given user'
                 ),
                 'required' => true,
-            ));
+                )
+            );
         } else {
-            $form->addElement('text', 'token', array(
+            $form->addElement(
+                'text', 'token', array(
                 'label' => $form->translate('API Token'),
                 'description' => $form->translate(
                     'API token for the given user'
                 ),
                 'required' => true,
-            ));
+                )
+            );
         }
 
         $form->addDisplayGroup(
@@ -253,10 +288,12 @@ class ImportSource extends ImportSourceHook
             array("legend" => "Server configuration")
         );
 
-        $form->setDisplayGroupDecorators(array(
+        $form->setDisplayGroupDecorators(
+            array(
             'FormElements',
             'Fieldset',
-        ));
+            )
+        );
     }
 
     protected static function addBoolean($form, $key, $options, $default = null)
@@ -271,10 +308,12 @@ class ImportSource extends ImportSourceHook
 
     protected static function optionalBoolean($form, $key, $label, $description)
     {
-        return static::addBoolean($form, $key, array(
+        return static::addBoolean(
+            $form, $key, array(
             'label' => $label,
             'description' => $description
-        ));
+            )
+        );
     }
 
     protected function api()

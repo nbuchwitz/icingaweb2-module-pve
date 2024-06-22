@@ -13,34 +13,54 @@ use Exception;
  */
 class CurlLoader
 {
-    /** @var resource */
+    /**
+     * @var resource curl instance
+     */
     private $curl;
 
-    /** @var string */
+    /**
+     * @var string hostname
+     */
     private $host;
 
-    /** @var int */
+    /**
+     * @var int port
+     */
     private $port;
 
-    /** @var string */
+    /**
+     * @var string username
+     */
     private $user;
 
-    /** @var string */
+    /**
+     * @var string password
+     */
     private $pass;
 
-    /** @var bool */
+    /**
+     * @var bool verify CA cert
+     */
     private $verifySslPeer = true;
 
-    /** @var bool */
+    /**
+     * @var bool verify hostname
+     */
     private $verifySslHost = true;
 
-    /** @var bool */
+    /**
+     * @var bool
+     */
     private $persistCookies = false;
 
-    /** @var string */
+    /**
+     * @var string
+     */
     private $cookieFile;
 
-    /** @var array */
+    /**
+     * @var array list of cookies
+     */
     private $cookies = array();
 
     /**
@@ -48,10 +68,10 @@ class CurlLoader
      *
      * Please note that only the host and port is required.
      *
-     * @param string $host
+     * @param string  $host
      * @param integer $port
-     * @param string $user
-     * @param string $pass
+     * @param string  $user
+     * @param string  $pass
      */
     public function __construct($host, $port, $user = null, $pass = null)
     {
@@ -68,7 +88,7 @@ class CurlLoader
     }
 
     /**
-     * @param bool $disable
+     * @param  bool $disable
      * @return $this
      */
     public function disableSslPeerVerification($disable = true)
@@ -78,7 +98,7 @@ class CurlLoader
     }
 
     /**
-     * @param bool $disable
+     * @param  bool $disable
      * @return $this
      */
     public function disableSslHostVerification($disable = true)
@@ -107,7 +127,7 @@ class CurlLoader
     }
 
     /**
-     * @param $url
+     * @param  $url
      * @return string
      */
     public function url($url)
@@ -116,8 +136,8 @@ class CurlLoader
     }
 
     /**
-     * @param $url
-     * @param null $body
+     * @param  $url
+     * @param  array|null $body
      * @return mixed
      */
     public function get($url, $body = null, $headers = array())
@@ -126,9 +146,9 @@ class CurlLoader
     }
 
     /**
-     * @param $url
-     * @param null $body
-     * @param array $headers
+     * @param  $url
+     * @param  array|null $body
+     * @param  array      $headers
      * @return mixed
      */
     public function post($url, $body = null, $headers = array())
@@ -137,10 +157,10 @@ class CurlLoader
     }
 
     /**
-     * @param $method
-     * @param $url
-     * @param null $body
-     * @param array $headers
+     * @param  $method
+     * @param  $url
+     * @param  array|null $body
+     * @param  array      $headers
      * @return mixed
      * @throws Exception
      */
@@ -229,8 +249,8 @@ class CurlLoader
      *
      * Returns the number of processed bytes and handles eventual Cookies
      *
-     * @param $curl
-     * @param $header
+     * @param  $curl
+     * @param  $header
      * @return int
      */
     public function processHeaderLine($curl, $header)
