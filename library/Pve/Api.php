@@ -24,31 +24,29 @@ class Api
     /** @var string */
     private $user;
 
-    /** @var string */
-    private $pass;
-
     /** @var int */
     private $loginTimestamp = 0;
 
     /** @var array */
     private $loginTicket;
 
+    /** @var string */
+    private $loginToken;
+
     /**
      * Api constructor.
      *
      * @param string $host
      * @param integer $port
-     * @param string $user
      * @param string $realm
-     * @param string $pass
+     * @param string $user
      */
-    public function __construct($host, $port, $realm, $user, $pass)
+    public function __construct($host, $port, $realm, $user)
     {
         $this->host = $host;
         $this->port = $port;
         $this->realm = $realm;
         $this->user = $user;
-        $this->pass = $pass;
     }
 
     /**
@@ -285,6 +283,24 @@ class Api
         return $nodes;
     }
 
+    /**
+     * Prepare request headers
+     * 
+     * This will add the login token if present to the headers
+     */
+    private function getHeaders()
+    {
+        $headers = [];
+
+        if ($this->loginToken) {
+            $headers["Authorization"] =  "PVEAPIToken=" . $this->user . "@" . $this->realm . "!" . $this->loginToken;
+        } else {
+            $headers["CSRFPreventionToken"] = $this->loginTicket['CSRFPreventionToken'];
+        }
+
+        return $headers;
+    }
+
     protected function get($url, $body = array())
     {
         return $this->request("get", $url, $body);
@@ -292,34 +308,42 @@ class Api
 
     protected function post($url, $body = array())
     {
-        $headers = ["CSRFPreventionToken" => $this->loginTicket['CSRFPreventionToken']];
-
-        return $this->request("post", $url, $body, $headers);
+        return $this->request("post", $url, $body);
     }
 
-    protected function request($method, $url, $body = array(), $header = array())
+    protected function request($method, $url, $body = array(), $additionalHeaders = array())
     {
-        if (!$this->hasValidTicket()) {
+        if (!$this->loginToken and !$this->hasValidTicket()) {
             return;
         }
+
+        $headers = $this->getHeaders() + $additionalHeaders;
 
         $url = $this->makeLocation() . $url;
         switch ($method) {
             case "get":
-                return $this->curl()->get($url, $body)['data'];
+                return $this->curl()->get($url, $body, $headers)['data'];
                 break;
             case "post":
-                return $this->curl()->post($url, $body, $header)['data'];
+                return $this->curl()->post($url, $body, $headers)['data'];
                 break;
         }
     }
 
     /**
-     * Log in to to API
+     * Log in to PVE API with authorization token
+     */
+    public function loginWithToken($token)
+    {
+        $this->loginToken = $token;
+    }
+
+    /**
+     * Log in to PVE API with password (legacy)
      *
      * This will retrieve a session ticket and pass it with subsequent requests
      */
-    public function login()
+    public function loginWithPassword($password)
     {
         if ($this->hasValidTicket()) {
             return;
@@ -328,7 +352,7 @@ class Api
         $body = http_build_query([
             "realm" => $this->realm,
             "username" => $this->user,
-            "password" => $this->pass
+            "password" => $password
         ]);
 
         $url = $this->makeLocation() . "/access/ticket";

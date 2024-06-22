@@ -120,9 +120,9 @@ class CurlLoader
      * @param null $body
      * @return mixed
      */
-    public function get($url, $body = null)
+    public function get($url, $body = null, $headers = array())
     {
-        return $this->request('get', $url, $body);
+        return $this->request('get', $url, $body, $headers);
     }
 
     /**

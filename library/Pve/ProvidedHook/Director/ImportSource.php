@@ -17,9 +17,25 @@ class ImportSource extends ImportSourceHook
     /** @var  Api */
     protected $api;
 
+    /**
+     * Default authentification type. For now this is legacy, but will be changed to token in the future.
+     * @var string
+     * */
+    public static $defaultAuthType = "legacy";
+
     public function getName()
     {
         return 'Proxmox Virtual Environment (PVE)';
+    }
+
+    public function getAuthType()
+    {
+        return $this->getSetting("auth_type", self::$defaultAuthType);
+    }
+
+    private function isTokenAuth()
+    {
+        return $this->getAuthType() === "token";
     }
 
     public function fetchData()
@@ -27,7 +43,12 @@ class ImportSource extends ImportSourceHook
         $data = [];
 
         $api = $this->api();
-        $api->login();
+        if ($this->isTokenAuth()) {
+            $api->loginWithToken($this->getSetting("token"));
+        } else {
+            $api->loginWithPassword($this->getSetting('password'));
+        }
+       
         switch ($this->getSetting("object_type")) {
             case "VirtualMachine":
                 $fetchGuestAgent = $this->getSetting('vm_guest_agent') === 'y';
@@ -113,38 +134,20 @@ class ImportSource extends ImportSourceHook
             ], 'n');
         }
 
-        $form->addElement('select', 'scheme', [
-            'label' => $form->translate('Protocol'),
+        static::addBoolean($form, 'ssl_verify_peer', [
+            'label' => $form->translate('Verify Peer'),
             'description' => $form->translate(
-                'Whether to use encryption when talking to your PVE cluster'
-            ),
-            'multiOptions' => [
-                'HTTPS' => $form->translate('HTTPS (strongly recommended)'),
-                'HTTP' => $form->translate('HTTP (this is plaintext!)'),
-            ],
-            'class' => 'autosubmit',
-            'value' => 'HTTPS',
-            'required' => true,
-        ]);
-
-        $ssl = !($form->getSentOrObjectSetting('scheme', 'HTTPS') === 'HTTP');
-
-        if ($ssl) {
-            static::addBoolean($form, 'ssl_verify_peer', [
-                'label' => $form->translate('Verify Peer'),
-                'description' => $form->translate(
-                    'Whether we should check that our peer\'s certificate has'
-                    . ' been signed by a trusted CA. This is strongly recommended.'
-                )
-            ], 'y');
-            static::addBoolean($form, 'ssl_verify_host', array(
-                'label' => $form->translate('Verify Host'),
-                'description' => $form->translate(
-                    'Whether we should check that the certificate matches the'
-                    . 'configured host'
-                )
-            ), 'y');
-        }
+                'Whether we should check that our peer\'s certificate has'
+                . ' been signed by a trusted CA. This is strongly recommended.'
+            )
+        ], 'y');
+        static::addBoolean($form, 'ssl_verify_host', array(
+            'label' => $form->translate('Verify Host'),
+            'description' => $form->translate(
+                'Whether we should check that the certificate matches the'
+                . 'configured host'
+            )
+        ), 'y');
 
         $form->addElement('text', 'host', array(
             'label' => $form->translate('PVE host'),
@@ -166,6 +169,20 @@ class ImportSource extends ImportSourceHook
             'required' => true,
         ));
 
+
+        $form->addElement('select', 'auth_type', [
+            'label' => $form->translate('Authentification Type'),
+            'description' => $form->translate(
+                'Authentification type can be either token based or legacy username and password'
+            ),
+            'multiOptions' => $form->optionalEnum([
+                'token' => 'Token',
+                'legacy' => 'Username / Password',
+            ]),
+            'class' => 'autosubmit',
+            'required' => true,
+        ]);
+
         $form->addElement('select', 'realm', [
             'label' => $form->translate('Realm'),
             'multiOptions' => [
@@ -186,10 +203,22 @@ class ImportSource extends ImportSourceHook
             'required' => true,
         ));
 
-        $form->addElement('password', 'password', array(
-            'label' => $form->translate('Password'),
-            'required' => true,
-        ));
+        $legacyAuth = ($form->getSentOrObjectSetting('auth_type', self::$defaultAuthType) === 'legacy');
+
+        if ($legacyAuth) {
+            $form->addElement('password', 'password', array(
+                'label' => $form->translate('Password'),
+                'required' => true,
+            ));
+        } else {
+            $form->addElement('text', 'token', array(
+                'label' => $form->translate('API Token'),
+                'description' => $form->translate(
+                    'Will be used for API authentication against your PVE host'
+                ),
+                'required' => true,
+            ));
+        }
     }
 
     protected static function addBoolean($form, $key, $options, $default = null)
@@ -213,7 +242,6 @@ class ImportSource extends ImportSourceHook
     protected function api()
     {
         if ($this->api === null) {
-            $scheme = $this->getSetting('scheme', 'HTTPS');
             $port = $this->getSetting('port', '8006');
 
             $this->api = new Api(
@@ -221,19 +249,15 @@ class ImportSource extends ImportSourceHook
                 $port,
                 $this->getSetting('realm'),
                 $this->getSetting('username'),
-                $this->getSetting('password'),
-                $scheme
             );
 
             $curl = $this->api->curl();
 
-            if ($scheme === 'HTTPS') {
-                if ($this->getSetting('ssl_verify_peer', 'y') === 'n') {
-                    $curl->disableSslPeerVerification();
-                }
-                if ($this->getSetting('ssl_verify_host', 'y') === 'n') {
-                    $curl->disableSslHostVerification();
-                }
+            if ($this->getSetting('ssl_verify_peer', 'y') === 'n') {
+                $curl->disableSslPeerVerification();
+            }
+            if ($this->getSetting('ssl_verify_host', 'y') === 'n') {
+                $curl->disableSslHostVerification();
             }
         }
 
