@@ -54,4 +54,4 @@ newly provided styling is loaded.
 
 ## Configuration
 
-The configuration of the module is described in the [configuration](02-configuration.md) chapter.
+The configuration of the module is described in the [configuration](02-Configuration.md) chapter.
