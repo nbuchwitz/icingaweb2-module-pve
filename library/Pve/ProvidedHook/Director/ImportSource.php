@@ -113,7 +113,7 @@ class ImportSource extends ImportSourceHook
 
         if ($vm) {
             static::addBoolean($form, 'vm_guest_agent', [
-                'label' => $form->translate('Use Guest Agent'),
+                'label' => $form->translate('Fetch Guest Agent data'),
                 'description' => $form->translate(
                     'Fetch additional data from the QEMU guest agent (additional user permissions needed: VM.Monitor)'
                 ),
@@ -173,11 +173,11 @@ class ImportSource extends ImportSourceHook
         $form->addElement('select', 'auth_type', [
             'label' => $form->translate('Authentification Type'),
             'description' => $form->translate(
-                'Authentification type can be either token based or legacy username and password'
+                'Authentification type can be either token based or legacy password'
             ),
             'multiOptions' => $form->optionalEnum([
                 'token' => 'Token',
-                'legacy' => 'Username / Password',
+                'legacy' => 'Password',
             ]),
             'class' => 'autosubmit',
             'required' => true,
@@ -208,17 +208,49 @@ class ImportSource extends ImportSourceHook
         if ($legacyAuth) {
             $form->addElement('password', 'password', array(
                 'label' => $form->translate('Password'),
+                'description' => $form->translate(
+                    'Password for the given user'
+                ),
                 'required' => true,
             ));
         } else {
             $form->addElement('text', 'token', array(
                 'label' => $form->translate('API Token'),
                 'description' => $form->translate(
-                    'Will be used for API authentication against your PVE host'
+                    'API token for the given user'
                 ),
                 'required' => true,
             ));
         }
+
+        $form->addDisplayGroup(
+            array(
+                "object_type",
+                "vm_guest_agent",
+                "vm_ha",
+                "vm_description",
+            ),
+            "object_config",
+            array("legend" => "Import object configuration")
+        );
+
+        $form->addDisplayGroup(
+            array(
+                "host",
+                "port",
+                "ssl_verify_peer", "ssl_verify_host",
+                "realm",
+                "auth_type",
+                "username", "token", "password",
+            ),
+            "pve_config",
+            array("legend" => "Server configuration")
+        );
+
+        $form->setDisplayGroupDecorators(array(
+            'FormElements',
+            'Fieldset',
+        ));
     }
 
     protected static function addBoolean($form, $key, $options, $default = null)
