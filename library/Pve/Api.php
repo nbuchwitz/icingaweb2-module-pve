@@ -203,7 +203,7 @@ class Api
                                 $ipv4 = [];
                                 $ipv6 = [];
                                 $ips = $row['ip-addresses'] ?? array();
-                                foreach ($row['ip-addresses'] as $ip) {
+                                foreach ($ips as $ip) {
                                     if ($ip['ip-address-type'] === 'ipv4') {
                                         $ipv4[] = sprintf("%s/%s", $ip['ip-address'], $ip['prefix']);
                                     } else {
