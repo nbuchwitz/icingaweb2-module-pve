@@ -125,11 +125,24 @@ class Api
         }
     }
 
-    public function getPools() 
+    private function getPoolDetails($id)
+    {
+        $data = $this->get("/pools/" . $id);
+
+        return $data ?? [];
+    }
+
+    public function getPools($fetchDetails = true)
     {
         $pools = [];
         foreach ($this->get("/pools") as $pl) {
-            $pool = [ 'pool_id' => $pl['poolid'], ];
+            $pool = [ 'pool_id' => $pl['poolid'] ];
+
+            if ($fetchDetails) {
+                $details = $this->getPoolDetails($pl['poolid']);
+                $pool["comment"] = $details["comment"] ?? "";
+            }
+
             $pools[]=(object)$pool;
         }
         return $pools;
