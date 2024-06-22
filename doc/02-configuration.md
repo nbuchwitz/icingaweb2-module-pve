@@ -45,6 +45,15 @@ Additionall steps:
 - Choose `Virtual Machines` in the `Object Type` list
 - Set the `Key column name` (usually `vm_id` or `vm_name` for a virtual machine)
 
+### Import source for storages
+
+Create an import source and perform the basic configuration as described above.
+
+Additionall steps:
+
+- Choose `Storages` in the `Object Type` list
+- Set the `Key column name` (usually `storage_id` for a resource pool)
+
 ### Import source for resource pools
 
 Create an import source and perform the basic configuration as described above.

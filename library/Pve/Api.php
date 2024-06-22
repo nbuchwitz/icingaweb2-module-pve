@@ -125,6 +125,36 @@ class Api
         }
     }
 
+    public function getStorages($node = null)
+    {
+        $storages = [];
+
+        $data = $this->get("/storage");
+        foreach ($data as $storage) {
+            if ($storage["disable"] ?? 0 == 1) {
+                continue;
+            }
+
+            if ($node) {
+                $storageNodes = explode(",", $storage["nodes"] ?? []);
+                if (!in_array($node, $storageNodes)) {
+                    continue;
+                }
+            }
+
+            $storages[] =  (object)[
+                "storage_id" => $storage["storage"],
+                "content" => $storage["content"],
+                "shared" => (int) ($storage["shared"] ?? 0) === 1,
+                "nodes" => $storage["nodes"] ?? "",
+                "type" => $storage["type"],
+            ];
+
+        }
+
+        return $storages;
+    }
+
     private function getPoolDetails($id)
     {
         $data = $this->get("/pools/" . $id);
