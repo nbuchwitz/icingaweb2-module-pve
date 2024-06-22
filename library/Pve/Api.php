@@ -123,12 +123,12 @@ class Api
 
     public function getPools() 
     {
-	$pools=[];
-	foreach ($this->get("/pools") as $pl) {
-		$pool = [ 'pool_id' => $pl['poolid'], ];
-		$pools[]=(object)$pool;
-	}
-	return $pools;
+        $pools = [];
+        foreach ($this->get("/pools") as $pl) {
+            $pool = [ 'pool_id' => $pl['poolid'], ];
+            $pools[]=(object)$pool;
+        }
+        return $pools;
     }
 
     private function getVmDescription($host, $vmid) {
