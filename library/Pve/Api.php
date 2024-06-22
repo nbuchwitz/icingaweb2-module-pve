@@ -323,10 +323,8 @@ class Api
         switch ($method) {
             case "get":
                 return $this->curl()->get($url, $body, $headers)['data'];
-                break;
             case "post":
                 return $this->curl()->post($url, $body, $headers)['data'];
-                break;
         }
     }
 
