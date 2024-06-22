@@ -142,6 +142,8 @@ class Api
 
     public function getVMs($guestAgent = false, $description = false, $ha = false)
     {
+        $vms = [];
+
         foreach ($this->get("/cluster/resources?type=vm") as $el) {
             // filter VM templates
             if ($el['template'] === 1) {
