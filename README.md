@@ -23,7 +23,7 @@ Icinga Web 2 and this Icinga Web 2 module are licensed under the terms of the GN
 
 ## Documentation
 
-* [Installation](doc/01-Installation.md)
+- [Installation](doc/01-Installation.md)
 
 ## Support
 
@@ -31,9 +31,8 @@ Join the [Icinga community channels](https://www.icinga.com/community/get-involv
 
 ## Requirements
 
-* [Icinga Web 2](https://www.icinga.com/products/icinga-web-2/) (>= 2.4.1)
-* [Icinga Director](https://github.com/icinga/icingaweb2-module-director) (>= 1.3.0)
-
+- [Icinga Web 2](https://www.icinga.com/products/icinga-web-2/) (>= 2.4.1)
+- [Icinga Director](https://github.com/icinga/icingaweb2-module-director) (>= 1.3.0)
 
 ## Thanks
 
