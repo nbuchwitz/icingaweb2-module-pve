@@ -202,6 +202,11 @@ class Api
 
             $pools[] = (object) $pool;
         }
+
+        // to prevent false positive change checks, ensure import values are sorted
+        $id = array_column($pools, 'pool_id');
+        array_multisort($id, SORT_ASC, $pools);
+
         return $pools;
     }
 
