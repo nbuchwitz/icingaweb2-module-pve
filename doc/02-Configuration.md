@@ -83,9 +83,11 @@ The following fields are imported (fields marked with `*` are optional):
 
 | name | type | description | example |
 |------|------|-------------|---------|
-| `storage_id` | string | Identifier / display name of the storage (matches display value as in PVE UI) | `rpool` |
+| `storage_id` | string | Unqiue identifier of the storage node / node combiniation | `pve10/rpool` |
+| `node` | string | Name of the node, where storage is located | `pve10` |
+| `name` | string | Name of the storage node (matches display value as in PVE UI) | `rpool` |
+| `capacity` | integer | Capacity of the storage in bytes | `8057125208064` |
 | `content` | list | Allowed content for this storage. Values are separated by comma (split with a modifier) | `rootdir,images,iso,vztmpl,backup` |
-| `nodes` | list | Comma separated list of node names, where the storage is present (empty if present on all nodes in cluster). Split content with a modifier if needed. | `pve01,pve10` |
 | `shared` | bool | Indicates if a pool is shared across the cluster (`true` when field `nodes` is empty) | - |
 | `type` | string | storage type | `zfspool` |
 
