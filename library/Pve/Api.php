@@ -363,6 +363,10 @@ class Api
             $nodes[] = (object) $node;
         }
 
+        // to prevent false positive change checks, ensure import values are sorted
+        $id = array_column($nodes, 'name');
+        array_multisort($id, SORT_ASC, $nodes);
+
         return $nodes;
     }
 
