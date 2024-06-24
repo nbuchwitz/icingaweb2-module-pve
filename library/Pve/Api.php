@@ -198,17 +198,18 @@ class Api
         return $pools;
     }
 
-    private function getVmDescription($host, $vmid)
+    private function getVmConfigData($host, $vmid)
     {
         $url = sprintf("/nodes/%s/%s/config", $host, $vmid);
         $config = $this->get($url);
 
-        $description = $config['description'] ?? "";
-
-        return trim(stripslashes($description));
+        return array(
+            "description" => trim(stripslashes($config['description'] ?? "")),
+            "os_type" => trim(stripslashes($config['ostype'] ?? "")),
+        );
     }
 
-    public function getVMs($guestAgent = false, $description = false, $ha = false)
+    public function getVMs($guestAgent = false, $config = false, $ha = false)
     {
         $vms = [];
 
@@ -246,8 +247,8 @@ class Api
             $interfaces = [];
             switch ($el['type']) {
             case "qemu":
-                if ($description) {
-                    $vm['description'] = $this->getVmDescription($el['node'], $el['id']);
+                if ($config) {
+                    $vm = $vm + $this->getVmConfigData($el['node'], $el['id']);
                 }
 
                 if ($guestAgent) {
@@ -296,7 +297,7 @@ class Api
                 // get network interfaces
 
                 foreach ($this->get($url) as $key => $val) {
-                    if ($key == "description" and $description) {
+                    if ($key == "description" and $config) {
                         $vm['description'] = trim(stripslashes($val));
                     } elseif (preg_match('/^net.*/', $key)) {
                         $interface = ['ip' => [], 'ip6' => [], 'hwaddr' => 'N/A'];

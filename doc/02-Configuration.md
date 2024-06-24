@@ -39,18 +39,19 @@ Additionall steps:
 
 The following fields are imported (fields marked with `*` are optional):
 
-| name               | type    | description                                                                                                                                                                                                                                                                                      | example                                                                                                                                                                                                                                                                                     |
-| ------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vm_id`            | integer | Unique id of the virtual machine / lxc container (can be used as key column)                                                                                                                                                                                                                     | `123`                                                                                                                                                                                                                                                                                       |
-| `vm_name`          | string  | Name of the virtual machine / lxc container                                                                                                                                                                                                                                                      | `srv-db01`                                                                                                                                                                                                                                                                                  |
-| `vm_pool`          | string  | Assigned resource pool (empty if none)                                                                                                                                                                                                                                                           | `Web servers`                                                                                                                                                                                                                                                                               |
-| `vm_type`          | string  | `qemu` if VM or `lxc` if container                                                                                                                                                                                                                                                               | `Web servers`                                                                                                                                                                                                                                                                               |
-| `vm_host`          | string  | Name of the PVE node where the virtual machine / lxc container is running                                                                                                                                                                                                                        | `pve10`                                                                                                                                                                                                                                                                                     |
-| `hardware_cpu`     | integer | number of assigned cpu cores                                                                                                                                                                                                                                                                     | `4`                                                                                                                                                                                                                                                                                         |
-| `hardware_memory`  | integer | amount of assigned memory in megabytes                                                                                                                                                                                                                                                           | `32768`                                                                                                                                                                                                                                                                                     |
-| `guest_network` \* | object  | MAC address and ip addresses (IPv4 and IPv6). On virtual machines this field is only populated if the qemu guest agent is running and the import source has set the configuration option `Fetch Guest Agent data` to `yes` (needs additional request, thus might be slow in larger environments) | <pre>{<br />&emsp;ens18: {<br />&emsp;&emsp;hwaddr: "aa:bb:cc:dd:ee:ff",<br />&emsp;&emsp;ipv4: [<br />&emsp;&emsp;&emsp;"192.168.42.42/24"<br />&emsp;&emsp;],<br />&emsp;&emsp;ipv6: [<br />&emsp;&emsp;&emsp;"fe80::5c11:45ff:fe05:2ca3/64"<br />&emsp;&emsp;]<br />&emsp;}<br />}</pre> |
-| `vm_ha` \*         | bool    | Is the VM or container managed by the high availability service. This field is only present if the import source has set the configuration option `Fetch VM HA state` to `yes` (needs additional request, thus might be slow in larger environments).                                            | `true`                                                                                                                                                                                                                                                                                      |
-| `description` \*   | string  | Optional description field of the VM or container. This field is only present if the import source has set the configuration option `Fetch VM description` to `yes` (needs additional request, thus might be slow in larger environments).                                                       | `Web server for customer ACME corp.`                                                                                                                                                                                                                                                        |
+| name | type | description | example |
+|------|------|-------------|---------|
+| `vm_id` | integer | Unique id of the virtual machine / lxc container (can be used as key column) | `123` |
+| `vm_name` | string | Name of the virtual machine / lxc container | `srv-db01` |
+| `vm_pool` | string | Assigned resource pool (empty if none) | `Web servers` |
+| `vm_type` | string | `qemu` if VM or `lxc` if container | `Web servers` |
+| `vm_host` | string | Name of the PVE node where the virtual machine / lxc container is running | `pve10` |
+| `hardware_cpu` | integer | number of assigned cpu cores | `4` |
+| `hardware_memory` | integer | amount of assigned memory in megabytes | `32768` |
+| `guest_network` \* | object | MAC address and ip addresses (IPv4 and IPv6). On virtual machines this field is only populated if the qemu guest agent is running and the import source has set the configuration option `Fetch Guest Agent data` to `yes` (needs additional request, thus might be slow in larger environments) | <pre>{<br />&emsp;ens18: {<br />&emsp;&emsp;hwaddr: "aa:bb:cc:dd:ee:ff",<br />&emsp;&emsp;ipv4: [<br />&emsp;&emsp;&emsp;"192.168.42.42/24"<br />&emsp;&emsp;],<br />&emsp;&emsp;ipv6: [<br />&emsp;&emsp;&emsp;"fe80::5c11:45ff:fe05:2ca3/64"<br />&emsp;&emsp;]<br />&emsp;}<br />}</pre> |
+| `vm_ha` \* | bool | Is the VM or container managed by the high availability service. This field is only present if the import source has set the configuration option `Fetch VM HA state` to `yes` (needs additional request, thus might be slow in larger environments). | `true` |
+| `description` \* | string | Optional description field of the VM or container. This field is only present if the import source has set the configuration option `Fetch VM config` to `yes` (needs additional request, thus might be slow in larger environments). | `Web server for customer ACME corp.` |
+| `os_type` \* | string | Optional operating system type field of the VM or container. This field is only present if the import source has set the configuration option `Fetch VM config` to `yes` (needs additional request, thus might be slow in larger environments). | `win10` |
 
 ### Virtual Machines / LXC Container (object type `Virtual Machines`)
 
@@ -63,11 +64,11 @@ Additionall steps:
 
 The following fields are imported (fields marked with `*` are optional):
 
-| name     | type    | description                                               | example        |
-| -------- | ------- | --------------------------------------------------------- | -------------- |
-| `name`   | string  | Hostname of the node (matches display value as in PVE UI) | `pve01`        |
-| `cpu`    | integer | Number of host cpu threads                                | `32`           |
-| `memory` | integer | Amount of host memory in bytes                            | `135030501376` |
+| name | type | description | example |
+|------|------|-------------|---------|
+| `name` | string | Hostname of the node (matches display value as in PVE UI) | `pve01` |
+| `cpu` | integer | Number of host cpu threads | `32` |
+| `memory` | integer | Amount of host memory in bytes | `135030501376` |
 
 ### Storage (object type `Storages`)
 
@@ -80,13 +81,13 @@ Additionall steps:
 
 The following fields are imported (fields marked with `*` are optional):
 
-| name         | type   | description                                                                                                                                           | example                            |
-| ------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `storage_id` | string | Identifier / display name of the storage (matches display value as in PVE UI)                                                                         | `rpool`                            |
-| `content`    | list   | Allowed content for this storage. Values are separated by comma (split with a modifier)                                                               | `rootdir,images,iso,vztmpl,backup` |
-| `nodes`      | list   | Comma separated list of node names, where the storage is present (empty if present on all nodes in cluster). Split content with a modifier if needed. | `pve01,pve10`                      |
-| `shared`     | bool   | Indicates if a pool is shared across the cluster (`true` when field `nodes` is empty)                                                                 |
-| `type`       | string | storage type                                                                                                                                          | `zfspool`                          |
+| name | type | description | example |
+|------|------|-------------|---------|
+| `storage_id` | string | Identifier / display name of the storage (matches display value as in PVE UI) | `rpool` |
+| `content` | list | Allowed content for this storage. Values are separated by comma (split with a modifier) | `rootdir,images,iso,vztmpl,backup` |
+| `nodes` | list | Comma separated list of node names, where the storage is present (empty if present on all nodes in cluster). Split content with a modifier if needed. | `pve01,pve10` |
+| `shared` | bool | Indicates if a pool is shared across the cluster (`true` when field `nodes` is empty) | - |
+| `type` | string | storage type | `zfspool` |
 
 ### Resource Pools (object type `Pools`)
 
@@ -99,7 +100,7 @@ Additionall steps:
 
 The following fields are imported (fields marked with `*` are optional):
 
-| name      | type   | description                                                                | example                                 |
-| --------- | ------ | -------------------------------------------------------------------------- | --------------------------------------- |
-| `pool_id` | string | Identifier / display name of the pool (matches display value as in PVE UI) | `Web servers`                           |
-| `comment` | string | Optional descriptive comment of the pool                                   | `Pool contains all customer webservers` |
+| name | type | description | example |
+|------|------|-------------|---------|
+| `pool_id` | string | Identifier / display name of the pool (matches display value as in PVE UI) | `Web servers` |
+| `comment` | string | Optional descriptive comment of the pool | `Pool contains all customer webservers` |

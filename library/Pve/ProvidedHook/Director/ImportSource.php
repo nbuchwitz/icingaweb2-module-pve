@@ -55,10 +55,10 @@ class ImportSource extends ImportSourceHook
         switch ($this->getSetting("object_type")) {
         case "VirtualMachine":
             $fetchGuestAgent = $this->getSetting('vm_guest_agent') === 'y';
-            $fetchDescription = $this->getSetting('vm_description') === 'y';
+            $fetchConfig = $this->getSetting('vm_config') === 'y';
             $fetchHaState = $this->getSetting('vm_ha') === 'y';
 
-            $data = $api->getVMs($fetchGuestAgent, $fetchDescription, $fetchHaState);
+            $data = $api->getVMs($fetchGuestAgent, $fetchConfig, $fetchHaState);
 
             break;
         case "HostSystem":
@@ -146,10 +146,10 @@ class ImportSource extends ImportSourceHook
             );
 
             static::addBoolean(
-                $form, 'vm_description', [
-                'label' => $form->translate('Fetch VM description'),
+                $form, 'vm_config', [
+                'label' => $form->translate('Fetch VM configuration'),
                 'description' => $form->translate(
-                    'Fetch VM description from configuration. This will result in an additional query for each VM, thus can be slow for larger environments.'
+                    'Fetch VM configuration for additional data (eg. descript or ostype). This will result in an additional query for each VM, thus can be slow for larger environments.'
                 ),
                 ], 'n'
             );
@@ -267,9 +267,9 @@ class ImportSource extends ImportSourceHook
         $form->addDisplayGroup(
             array(
                 "object_type",
+                "vm_config",
                 "vm_guest_agent",
                 "vm_ha",
-                "vm_description",
             ),
             "object_config",
             array("legend" => "Import object configuration")
