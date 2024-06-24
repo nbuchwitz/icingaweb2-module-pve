@@ -149,28 +149,35 @@ class Api
     {
         $storages = [];
 
-        $data = $this->get("/storage");
+        $data = $this->get("/cluster/resources/?type=storage");
         foreach ($data as $storage) {
-            if ($storage["disable"] ?? 0 == 1) {
-                continue;
-            }
-
             if ($node) {
-                $storageNodes = explode(",", $storage["nodes"] ?? []);
-                if (!in_array($node, $storageNodes)) {
+                if ($node != $storage["node"]) {
                     continue;
                 }
             }
 
+            // provide sorted storage contents as list,
+            // so it can be used easier with modifiers
+            $contents = (array) explode(",", $storage["content"]);
+            sort($contents);
+
             $storages[] = (object) [
-                "storage_id" => $storage["storage"],
-                "content" => $storage["content"],
+                "name" => $storage["storage"],
+                "storage_id" => str_replace("storage/", "", $storage["id"]),
+                "content" => $contents,
                 "shared" => (int) ($storage["shared"] ?? 0) === 1,
-                "nodes" => $storage["nodes"] ?? "",
+                "node" => $storage["node"],
                 "type" => $storage["type"],
+                "capacity" => $storage["maxdisk"],
             ];
 
         }
+
+        // sort results by id in order to ensure that the import
+        // check works correctly
+        $id = array_column($storages, 'storage_id');
+        array_multisort($id, SORT_ASC, $storages);
 
         return $storages;
     }
@@ -195,6 +202,11 @@ class Api
 
             $pools[] = (object) $pool;
         }
+
+        // to prevent false positive change checks, ensure import values are sorted
+        $id = array_column($pools, 'pool_id');
+        array_multisort($id, SORT_ASC, $pools);
+
         return $pools;
     }
 
@@ -355,6 +367,10 @@ class Api
 
             $nodes[] = (object) $node;
         }
+
+        // to prevent false positive change checks, ensure import values are sorted
+        $id = array_column($nodes, 'name');
+        array_multisort($id, SORT_ASC, $nodes);
 
         return $nodes;
     }
