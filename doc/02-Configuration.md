@@ -10,9 +10,34 @@ The module needs a Proxmox VE user with at least the following permissions:
 
 > **Note**: If the values from QEMU guest agent should be fetch too, additionally the permission `VM.Monitor` is required.
 
-For authentification either a API token or the users password can be used. It is highly recommended to use the API token though.
+For authentification either a API token or the users password can be used. It is **highly** recommended to use the API token though.
 
-See the official Proxmox VE documentation for more information on how to create user, role and API token.
+### Create Proxmox API user example
+
+```bash
+pveum roleadd role-icinga2proxmoxsync
+pveum rolemod role-icinga2proxmoxsync --privs VM.Audit,Pool.Audit,Sys.Audit,VM.Monitor
+pveum useradd icinga2proxmoxsync@pve --comment "The ICINGA2 Proxmox import sync user"
+pveum user token add icinga2proxmoxsync@pve role-icinga2proxmoxsync
+pveum acl modify / --roles role-icinga2proxmoxsync --user 'icinga2proxmoxsync@pve'
+pveum acl modify / --roles role-icinga2proxmoxsync --tokens 'icinga2proxmoxsync@pve!role-icinga2proxmoxsync'
+```
+
+This should return a text table with the relevant information required for API token authentication:
+
+```text
+┌──────────────┬────────────────────────────────────────────────┐
+│ key          │ value                                          │
+╞══════════════╪════════════════════════════════════════════════╡
+│ full-tokenid │ icinga2proxmoxsync@pve!role-icinga2proxmoxsync │
+├──────────────┼────────────────────────────────────────────────┤
+│ info         │ {"privsep":1}                                  │
+├──────────────┼────────────────────────────────────────────────┤
+│ value        │ aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee           │
+└──────────────┴────────────────────────────────────────────────┘
+```
+
+When setting up the import source in Director with the Authentication Type set to `Token`, the usernname would be `icinga2proxmoxsync` and the API token `role-icinga2proxmoxsync=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee`.
 
 ## Create an import source
 
@@ -41,17 +66,9 @@ The following fields are imported (fields marked with `*` are optional):
 
 | name | type | description | example |
 |------|------|-------------|---------|
-| `vm_id` | integer | Unique id of the virtual machine / lxc container (can be used as key column) | `123` |
-| `vm_name` | string | Name of the virtual machine / lxc container | `srv-db01` |
-| `vm_pool` | string | Assigned resource pool (empty if none) | `Web servers` |
-| `vm_type` | string | `qemu` if VM or `lxc` if container | `Web servers` |
-| `vm_host` | string | Name of the PVE node where the virtual machine / lxc container is running | `pve10` |
-| `hardware_cpu` | integer | number of assigned cpu cores | `4` |
-| `hardware_memory` | integer | amount of assigned memory in megabytes | `32768` |
-| `guest_network` \* | object | MAC address and ip addresses (IPv4 and IPv6). On virtual machines this field is only populated if the qemu guest agent is running and the import source has set the configuration option `Fetch Guest Agent data` to `yes` (needs additional request, thus might be slow in larger environments) | <pre>{<br />&emsp;ens18: {<br />&emsp;&emsp;hwaddr: "aa:bb:cc:dd:ee:ff",<br />&emsp;&emsp;ipv4: [<br />&emsp;&emsp;&emsp;"192.168.42.42/24"<br />&emsp;&emsp;],<br />&emsp;&emsp;ipv6: [<br />&emsp;&emsp;&emsp;"fe80::5c11:45ff:fe05:2ca3/64"<br />&emsp;&emsp;]<br />&emsp;}<br />}</pre> |
-| `vm_ha` \* | bool | Is the VM or container managed by the high availability service. This field is only present if the import source has set the configuration option `Fetch VM HA state` to `yes` (needs additional request, thus might be slow in larger environments). | `true` |
-| `description` \* | string | Optional description field of the VM or container. This field is only present if the import source has set the configuration option `Fetch VM config` to `yes` (needs additional request, thus might be slow in larger environments). | `Web server for customer ACME corp.` |
-| `os_type` \* | string | Optional operating system type field of the VM or container. This field is only present if the import source has set the configuration option `Fetch VM config` to `yes` (needs additional request, thus might be slow in larger environments). | `win10` |
+| `name` | string | Hostname of the node (matches display value as in PVE UI) | `pve01` |
+| `cpu` | integer | Number of host cpu threads | `32` |
+| `memory` | integer | Amount of host memory in bytes | `135030501376` |
 
 ### Virtual Machines / LXC Container (object type `Virtual Machines`)
 
@@ -66,9 +83,17 @@ The following fields are imported (fields marked with `*` are optional):
 
 | name | type | description | example |
 |------|------|-------------|---------|
-| `name` | string | Hostname of the node (matches display value as in PVE UI) | `pve01` |
-| `cpu` | integer | Number of host cpu threads | `32` |
-| `memory` | integer | Amount of host memory in bytes | `135030501376` |
+| `vm_id` | integer | Unique id of the virtual machine / lxc container (can be used as key column) | `123` |
+| `vm_name` | string | Name of the virtual machine / lxc container | `srv-db01` |
+| `vm_pool` | string | Assigned resource pool (empty if none) | `Web servers` |
+| `vm_type` | string | `qemu` if VM or `lxc` if container | `Web servers` |
+| `vm_host` | string | Name of the PVE node where the virtual machine / lxc container is running | `pve10` |
+| `hardware_cpu` | integer | number of assigned cpu cores | `4` |
+| `hardware_memory` | integer | amount of assigned memory in megabytes | `32768` |
+| `guest_network` \* | object | MAC address and ip addresses (IPv4 and IPv6). On virtual machines this field is only populated if the qemu guest agent is running and the import source has set the configuration option `Fetch Guest Agent data` to `yes` (needs additional request, thus might be slow in larger environments) | <pre>{<br />&emsp;ens18: {<br />&emsp;&emsp;hwaddr: "aa:bb:cc:dd:ee:ff",<br />&emsp;&emsp;ipv4: [<br />&emsp;&emsp;&emsp;"192.168.42.42/24"<br />&emsp;&emsp;],<br />&emsp;&emsp;ipv6: [<br />&emsp;&emsp;&emsp;"fe80::5c11:45ff:fe05:2ca3/64"<br />&emsp;&emsp;]<br />&emsp;}<br />}</pre> |
+| `vm_ha` \* | bool | Is the VM or container managed by the high availability service. This field is only present if the import source has set the configuration option `Fetch VM HA state` to `yes` (needs additional request, thus might be slow in larger environments). | `true` |
+| `description` \* | string | Optional description field of the VM or container. This field is only present if the import source has set the configuration option `Fetch VM config` to `yes` (needs additional request, thus might be slow in larger environments). | `Web server for customer ACME corp.` |
+| `os_type` \* | string | Optional operating system type field of the VM or container. This field is only present if the import source has set the configuration option `Fetch VM config` to `yes` (needs additional request, thus might be slow in larger environments). | `win10` |
 
 ### Storage (object type `Storages`)
 
