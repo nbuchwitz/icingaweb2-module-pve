@@ -226,6 +226,7 @@ class Api
                 "vm_type" => $el['type'],
                 "hardware_cpu" => (int) $el['maxcpu'],
                 "hardware_memory" => (int) $el['maxmem'] / 1024 * 1024,
+                "tags" => $el['tags'] ?? "",
             ];
 
             if (isset($el['pool'])) {
