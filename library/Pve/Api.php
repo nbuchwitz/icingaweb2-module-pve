@@ -169,7 +169,7 @@ class Api
                 "shared" => (int) ($storage["shared"] ?? 0) === 1,
                 "node" => $storage["node"],
                 "type" => $storage["type"],
-                "capacity" => $storage["maxdisk"],
+                "capacity" => $storage["maxdisk"] ?? null,
             ];
 
         }
